@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0f0a">
+<title>The Fractal Self</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  :root {
+    --bg: #0a0f0a;
+    --surface: rgba(30,45,25,0.4);
+    --border: rgba(80,110,60,0.2);
+    --border-active: rgba(100,150,70,0.4);
+    --text: #d4dcc4;
+    --text-dim: #7a8a6a;
+    --text-bright: #c4d4b4;
+    --accent: #6a9a5a;
+    --accent-glow: rgba(100,160,70,0.15);
+    --danger: #8a5a4a;
+    --gold: #c4a454;
+    --font: 'Cormorant Garamond', Georgia, serif;
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    min-height: 100dvh;
+    overflow-x: hidden;
+  }
+
+  .app {
+    max-width: 480px;
+    margin: 0 auto;
+    min-height: 100vh;
+    min-height: 100dvh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Header */
+  .header {
+    text-align: center;
+    padding: 20px 20px 6px;
+    flex-shrink: 0;
+  }
+  .header-icon { font-size: 26px; margin-bottom: 2px; }
+  .header-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-bright);
+    letter-spacing: 1.5px;
+  }
+  .header-sub {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  /* Nav */
+  .nav {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 8px 16px 10px;
+    flex-shrink: 0;
+  }
+  .nav-btn {
+    background: transparent;
+    border: 1px solid var(--border);
+    color: var(--text-dim);
+    padding: 6px 18px;
+    border-radius: 20px;
+    font-size: 13px;
+    font-family: var(--font);
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .nav-btn.active {
+    background: var(--accent-glow);
+    border-color: var(--border-active);
+    color: #a4c494;
+  }
+
+  /* Tree View */
+  .tree-view {
+    flex: 1;
+    position: relative;
+    min-height: 300px;
+  }
+  .tree-canvas {
+    width: 100%;
+    height: 100%;
+    display: block;
+    position: absolute;
+    top: 0; left: 0;
+  }
+  .tree-empty {
+    position: absolute;
+    top: 45%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 32px;
+    z-index: 2;
+  }
+  .tree-empty-icon { font-size: 48px; margin-bottom: 12px; }
+  .tree-empty-title { font-size: 22px; font-weight: 700; color: var(--text-bright); margin-bottom: 8px; }
+  .tree-empty-text { font-size: 15px; color: var(--text-dim); line-height: 1.5; margin-bottom: 24px; }
+  .cta-btn {
+    background: linear-gradient(135deg, #3a5a2a, #4a6a3a);
+    border: none;
+    color: #d4e4c4;
+    padding: 12px 36px;
+    border-radius: 24px;
+    font-size: 16px;
+    font-family: var(--font);
+    cursor: pointer;
+    letter-spacing: 1px;
+  }
+
+  /* Quick Check (overlay on tree) */
+  .quick-check {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(transparent, rgba(8,12,8,0.95) 30%);
+    padding: 40px 20px 24px;
+    z-index: 2;
+  }
+  .quick-title {
+    font-size: 11px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .quick-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 11px 14px;
+    margin-bottom: 6px;
+    color: #a4b494;
+    font-size: 15px;
+    font-family: var(--font);
+    cursor: pointer;
+    text-align: left;
+    transition: all 0.25s;
+  }
+  .quick-item.done {
+    background: rgba(60,90,45,0.3);
+    border-color: rgba(100,150,70,0.3);
+    color: #b4d4a4;
+  }
+  .quick-check-mark { font-size: 17px; width: 22px; flex-shrink: 0; text-align: center; }
+  .quick-name { flex: 1; }
+  .streak-badge {
+    font-size: 11px;
+    background: rgba(180,140,40,0.2);
+    padding: 2px 8px;
+    border-radius: 10px;
+    color: var(--gold);
+  }
+
+  /* Panels (habits + stats) */
+  .panel {
+    flex: 1;
+    padding: 12px 20px 40px;
+    overflow-y: auto;
+  }
+  .panel-title { font-size: 22px; font-weight: 700; color: var(--text-bright); margin-bottom: 4px; }
+  .panel-desc { font-size: 14px; color: var(--text-dim); margin-bottom: 20px; line-height: 1.5; }
+
+  /* Add habit */
+  .add-row { display: flex; gap: 8px; margin-bottom: 20px; }
+  .add-input {
+    flex: 1;
+    background: rgba(30,45,25,0.6);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 10px 14px;
+    color: var(--text-bright);
+    font-size: 15px;
+    font-family: var(--font);
+    outline: none;
+  }
+  .add-input::placeholder { color: rgba(120,140,100,0.5); }
+  .add-input:focus { border-color: var(--border-active); }
+  .add-btn {
+    background: linear-gradient(135deg, #3a5a2a, #4a6a3a);
+    border: none;
+    color: #d4e4c4;
+    width: 46px;
+    border-radius: 12px;
+    font-size: 24px;
+    font-family: var(--font);
+    cursor: pointer;
+  }
+
+  /* Suggestions */
+  .suggestions {
+    padding: 16px;
+    background: rgba(30,45,25,0.3);
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+  .suggestions-label { font-size: 13px; color: var(--text-dim); margin-bottom: 8px; }
+  .suggestion-btn {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: rgba(50,70,40,0.3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 9px 12px;
+    margin-bottom: 6px;
+    color: #a4b494;
+    font-size: 14px;
+    font-family: var(--font);
+    cursor: pointer;
+  }
+
+  /* Habit cards */
+  .habit-card {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border: 1px solid rgba(80,110,60,0.15);
+    border-radius: 12px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .habit-check {
+    width: 34px; height: 34px;
+    border-radius: 50%;
+    border: 2px solid rgba(80,110,60,0.4);
+    background: transparent;
+    color: transparent;
+    font-size: 17px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all 0.2s;
+  }
+  .habit-check.done {
+    background: rgba(70,110,50,0.4);
+    border-color: var(--accent);
+    color: #a4d494;
+  }
+  .habit-info { flex: 1; }
+  .habit-name { font-size: 16px; color: var(--text-bright); }
+  .habit-streak { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .remove-btn {
+    background: transparent;
+    border: none;
+    color: #5a4a4a;
+    font-size: 22px;
+    cursor: pointer;
+    padding: 4px;
+  }
+
+  /* Stats */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 16px 0 24px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid rgba(80,110,60,0.15);
+    border-radius: 12px;
+    padding: 16px 12px;
+    text-align: center;
+  }
+  .stat-number { font-size: 30px; font-weight: 700; color: var(--text-bright); margin-bottom: 4px; }
+  .stat-label { font-size: 11px; color: var(--text-dim); letter-spacing: 0.5px; }
+
+  .philosophy {
+    padding: 20px 16px;
+    background: rgba(30,45,25,0.3);
+    border-radius: 12px;
+    text-align: center;
+    margin-bottom: 24px;
+  }
+  .philo-quote { font-size: 15px; font-style: italic; color: #a4b494; line-height: 1.6; }
+  .philo-attr { font-size: 11px; color: #5a6a4a; margin-top: 8px; }
+
+  .reset-btn {
+    background: transparent;
+    border: 1px solid rgba(120,60,50,0.3);
+    color: var(--danger);
+    padding: 8px 20px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: var(--font);
+    cursor: pointer;
+    display: block;
+    margin: 0 auto;
+  }
+
+  .hidden { display: none !important; }
+
+  /* Install prompt */
+  .install-banner {
+    background: rgba(40,60,30,0.6);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: var(--text-dim);
+  }
+  .install-banner button {
+    background: var(--accent);
+    border: none;
+    color: #fff;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-family: var(--font);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .install-banner .dismiss {
+    background: transparent;
+    color: var(--text-dim);
+    padding: 5px;
+    font-size: 16px;
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div id="installBanner" class="install-banner hidden">
+    <span style="flex:1">Add to home screen for the best experience</span>
+    <button onclick="installApp()">Install</button>
+    <button class="dismiss" onclick="dismissInstall()">×</button>
+  </div>
+
+  <div class="header">
+    <div class="header-icon">🌿</div>
+    <div class="header-title">The Fractal Self</div>
+    <div class="header-sub">one rule, repeated</div>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" data-view="tree" onclick="switchView('tree')">🌳 Tree</button>
+    <button class="nav-btn" data-view="habits" onclick="switchView('habits')">✓ Habits</button>
+    <button class="nav-btn" data-view="stats" onclick="switchView('stats')">◎ Stats</button>
+  </div>
+
+  <!-- TREE VIEW -->
+  <div id="view-tree" class="tree-view">
+    <canvas id="treeCanvas" class="tree-canvas"></canvas>
+    <div id="treeEmpty" class="tree-empty hidden">
+      <div class="tree-empty-icon">🌱</div>
+      <div class="tree-empty-title">Plant your first seed</div>
+      <div class="tree-empty-text">Add one small habit — your fractal starts here</div>
+      <button class="cta-btn" onclick="switchView('habits')">Begin</button>
+    </div>
+    <div id="quickCheck" class="quick-check hidden"></div>
+  </div>
+
+  <!-- HABITS VIEW -->
+  <div id="view-habits" class="panel hidden">
+    <div class="panel-title">Your Commitments</div>
+    <div class="panel-desc">Start with one. The fractal doesn't need a perfect seed — it needs any living seed.</div>
+    <div class="add-row">
+      <input id="habitInput" class="add-input" placeholder="e.g. Brush my teeth" maxlength="50">
+      <button class="add-btn" onclick="addHabit()">+</button>
+    </div>
+    <div id="suggestions"></div>
+    <div id="habitList"></div>
+  </div>
+
+  <!-- STATS VIEW -->
+  <div id="view-stats" class="panel hidden">
+    <div class="panel-title">Your Fractal</div>
+    <div id="statsContent"></div>
+  </div>
+</div>
+
+<script>
+// ===== DATA LAYER =====
+const STORAGE_KEY = "fractal-self-data";
+
+function loadData() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch(e) {}
+  return { habits: [], logs: {} };
+}
+
+function saveData(data) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(data)); } catch(e) {}
+}
+
+let data = loadData();
+
+function getToday() {
+  return new Date().toISOString().split("T")[0];
+}
+
+function getStreak(habitId) {
+  let streak = 0;
+  const d = new Date();
+  for (let i = 0; i < 365; i++) {
+    const key = habitId + "-" + d.toISOString().split("T")[0];
+    if (data.logs[key]) { streak++; } else if (i > 0) break;
+    d.setDate(d.getDate() - 1);
+  }
+  return streak;
+}
+
+function getHealth() {
+  if (data.habits.length === 0) return 0.1;
+  const today = new Date();
+  let total = 0, checks = 0;
+  data.habits.forEach(h => {
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const key = h.id + "-" + d.toISOString().split("T")[0];
+      const w = (14 - i) / 14;
+      if (data.logs[key]) total += w;
+      checks += w;
+    }
+  });
+  return checks > 0 ? Math.max(0.1, total / checks) : 0.1;
+}
+
+function getTreeDepth() {
+  const totalChecks = Object.values(data.logs).filter(Boolean).length;
+  return Math.min(10, 3 + Math.floor(totalChecks / 3));
+}
+
+// ===== NAVIGATION =====
+let currentView = "tree";
+
+function switchView(view) {
+  currentView = view;
+  document.querySelectorAll(".nav-btn").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+  document.getElementById("view-tree").classList.toggle("hidden", view !== "tree");
+  document.getElementById("view-habits").classList.toggle("hidden", view !== "habits");
+  document.getElementById("view-stats").classList.toggle("hidden", view !== "stats");
+  if (view === "tree") drawTree();
+  if (view === "habits") renderHabits();
+  if (view === "stats") renderStats();
+}
+
+// ===== HABITS =====
+function addHabit() {
+  const input = document.getElementById("habitInput");
+  const name = input.value.trim();
+  if (!name) return;
+  data.habits.push({ id: Date.now().toString(), name, created: getToday() });
+  saveData(data);
+  input.value = "";
+  renderHabits();
+}
+
+function toggleLog(habitId) {
+  const key = habitId + "-" + getToday();
+  data.logs[key] = !data.logs[key];
+  saveData(data);
+  renderAll();
+}
+
+function removeHabit(habitId) {
+  data.habits = data.habits.filter(h => h.id !== habitId);
+  saveData(data);
+  renderHabits();
+  if (currentView === "tree") drawTree();
+}
+
+function fillSuggestion(text) {
+  document.getElementById("habitInput").value = text;
+  document.getElementById("habitInput").focus();
+}
+
+function renderHabits() {
+  const sugBox = document.getElementById("suggestions");
+  const listBox = document.getElementById("habitList");
+
+  if (data.habits.length === 0) {
+    const ideas = ["Brush my teeth", "Make my bed", "Drink a glass of water", "5 minutes of reading"];
+    sugBox.innerHTML = '<div class="suggestions"><div class="suggestions-label">Ideas for your first rule:</div>' +
+      ideas.map(i => '<button class="suggestion-btn" onclick="fillSuggestion(\'' + i + '\')">' + i + '</button>').join("") +
+      '</div>';
+  } else {
+    sugBox.innerHTML = "";
+  }
+
+  listBox.innerHTML = data.habits.map(h => {
+    const streak = getStreak(h.id);
+    const done = data.logs[h.id + "-" + getToday()];
+    return '<div class="habit-card">' +
+      '<button class="habit-check ' + (done ? "done" : "") + '" onclick="toggleLog(\'' + h.id + '\')">' + (done ? "✓" : "") + '</button>' +
+      '<div class="habit-info"><div class="habit-name">' + esc(h.name) + '</div>' +
+      '<div class="habit-streak">' + (streak > 0 ? streak + " day streak" : "Start today") + '</div></div>' +
+      '<button class="remove-btn" onclick="removeHabit(\'' + h.id + '\')">×</button></div>';
+  }).join("");
+}
+
+// ===== STATS =====
+function renderStats() {
+  const health = getHealth();
+  const totalChecks = Object.values(data.logs).filter(Boolean).length;
+  const bestStreak = data.habits.reduce((max, h) => Math.max(max, getStreak(h.id)), 0);
+  const hColor = health > 0.6 ? "#6a9a5a" : health > 0.3 ? "#aa8a3a" : "#9a4a3a";
+
+  document.getElementById("statsContent").innerHTML =
+    '<div class="stat-grid">' +
+      '<div class="stat-card"><div class="stat-number">' + data.habits.length + '</div><div class="stat-label">Active branches</div></div>' +
+      '<div class="stat-card"><div class="stat-number">' + totalChecks + '</div><div class="stat-label">Total iterations</div></div>' +
+      '<div class="stat-card"><div class="stat-number" style="color:' + hColor + '">' + Math.round(health*100) + '%</div><div class="stat-label">Tree vitality</div></div>' +
+      '<div class="stat-card"><div class="stat-number">' + bestStreak + '</div><div class="stat-label">Best streak</div></div>' +
+    '</div>' +
+    '<div class="philosophy"><div class="philo-quote">"You can redirect a moving object. You cannot steer a parked car."</div>' +
+    '<div class="philo-attr">— The Fractal Self</div></div>' +
+    '<button class="reset-btn" onclick="resetAll()">Reset everything</button>';
+}
+
+function resetAll() {
+  if (confirm("Reset all habits and history? This cannot be undone.")) {
+    data = { habits: [], logs: {} };
+    saveData(data);
+    switchView("tree");
+  }
+}
+
+// ===== TREE DRAWING =====
+function drawTree() {
+  const canvas = document.getElementById("treeCanvas");
+  const container = document.getElementById("view-tree");
+  const empty = document.getElementById("treeEmpty");
+  const quick = document.getElementById("quickCheck");
+
+  const rect = container.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  canvas.width = rect.width * dpr;
+  canvas.height = rect.height * dpr;
+  canvas.style.width = rect.width + "px";
+  canvas.style.height = rect.height + "px";
+  const ctx = canvas.getContext("2d");
+  ctx.scale(dpr, dpr);
+  const w = rect.width, h = rect.height;
+
+  const health = getHealth();
+  const depth = getTreeDepth();
+  const branchCount = Math.min(3, 2 + Math.floor(data.habits.length / 2));
+
+  // Background
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, h);
+  if (health > 0.5) {
+    skyGrad.addColorStop(0, "#0a1628"); skyGrad.addColorStop(0.5, "#1a2a40"); skyGrad.addColorStop(1, "#0d1f1a");
+  } else {
+    skyGrad.addColorStop(0, "#1a1510"); skyGrad.addColorStop(0.5, "#201a12"); skyGrad.addColorStop(1, "#151210");
+  }
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, w, h);
+
+  // Stars
+  for (let i = 0; i < 40; i++) {
+    const sx = (Math.sin(i * 127.1) * 0.5 + 0.5) * w;
+    const sy = (Math.cos(i * 311.7) * 0.5 + 0.5) * h * 0.6;
+    ctx.beginPath();
+    ctx.arc(sx, sy, 0.5 + Math.random(), 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,220," + (health * 0.6 + 0.2) * (0.3 + Math.random() * 0.4) + ")";
+    ctx.fill();
+  }
+
+  // Ground
+  const gGrad = ctx.createLinearGradient(0, h - 60, 0, h);
+  gGrad.addColorStop(0, "rgba(" + (30 + Math.floor((1-health)*30)) + "," + Math.floor(60 + health*40) + ",20,0.8)");
+  gGrad.addColorStop(1, "rgba(20,30,15,0.9)");
+  ctx.fillStyle = gGrad;
+  ctx.beginPath();
+  ctx.ellipse(w/2, h - 10, w * 0.4, 50, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Vitality label
+  ctx.font = "600 13px 'Cormorant Garamond', Georgia, serif";
+  ctx.fillStyle = "rgba(255,255,255,0.7)";
+  ctx.textAlign = "center";
+  ctx.fillText(Math.round(health * 100) + "% vitality", w / 2, 28);
+
+  if (data.habits.length > 0) {
+    const trunkLen = Math.min(h * 0.22, 90 + depth * 8);
+    drawBranch(ctx, w/2, h - 55, trunkLen, Math.PI/2, 0, depth, health, branchCount);
+    empty.classList.add("hidden");
+    renderQuickCheck(quick);
+    quick.classList.remove("hidden");
+  } else {
+    empty.classList.remove("hidden");
+    quick.classList.add("hidden");
+  }
+}
+
+function drawBranch(ctx, x, y, len, angle, depth, maxDepth, health, branchCount) {
+  if (depth > maxDepth || len < 2) return;
+  const hf = Math.max(0.1, health);
+  const ex = x + len * Math.cos(angle);
+  const ey = y - len * Math.sin(angle);
+
+  const t = 1 - depth / maxDepth;
+  const r = Math.floor(40 + t * 60 + (1 - hf) * 80);
+  const g = Math.floor(80 + (1 - t) * 120 * hf);
+  const b = Math.floor(20 + (1 - hf) * 30);
+
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(ex, ey);
+  ctx.strokeStyle = "rgba(" + r + "," + g + "," + b + "," + (0.4 + hf * 0.6) + ")";
+  ctx.lineWidth = Math.max(1, (maxDepth - depth) * 1.8 * hf);
+  ctx.lineCap = "round";
+  ctx.stroke();
+
+  if (depth >= maxDepth - 1 && hf > 0.3) {
+    ctx.beginPath();
+    ctx.arc(ex, ey, 3 + hf * 4, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(" + (40 + Math.floor((1-hf)*80)) + "," + Math.floor(120 + hf * 100) + ",30," + hf * 0.7 + ")";
+    ctx.fill();
+  }
+
+  if (depth >= maxDepth - 2 && hf < 0.4 && Math.random() > 0.7) {
+    ctx.beginPath();
+    ctx.arc(ex + (Math.random()-0.5)*10, ey + Math.random()*15, 2, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(160,120,40," + (0.3 - hf * 0.5) + ")";
+    ctx.fill();
+  }
+
+  const ba = 0.35 + (branchCount * 0.05);
+  const shrink = 0.68 + hf * 0.05;
+  const branches = Math.min(branchCount, 2 + Math.floor(depth / 2));
+
+  if (branches >= 2) {
+    drawBranch(ctx, ex, ey, len * shrink, angle + ba, depth + 1, maxDepth, health, branchCount);
+    drawBranch(ctx, ex, ey, len * shrink, angle - ba, depth + 1, maxDepth, health, branchCount);
+  }
+  if (branches >= 3 && depth < maxDepth - 2) {
+    drawBranch(ctx, ex, ey, len * shrink * 0.8, angle + ba * 0.3, depth + 1, maxDepth, health, branchCount);
+  }
+}
+
+function renderQuickCheck(el) {
+  el.innerHTML = '<div class="quick-title">Today</div>' +
+    data.habits.map(h => {
+      const done = data.logs[h.id + "-" + getToday()];
+      const streak = getStreak(h.id);
+      return '<button class="quick-item ' + (done ? "done" : "") + '" onclick="toggleLog(\'' + h.id + '\')">' +
+        '<span class="quick-check-mark">' + (done ? "✓" : "○") + '</span>' +
+        '<span class="quick-name">' + esc(h.name) + '</span>' +
+        (streak > 1 ? '<span class="streak-badge">' + streak + '🔥</span>' : '') +
+        '</button>';
+    }).join("");
+}
+
+function renderAll() {
+  if (currentView === "tree") drawTree();
+  if (currentView === "habits") renderHabits();
+  if (currentView === "stats") renderStats();
+}
+
+function esc(s) { const d = document.createElement("div"); d.textContent = s; return d.innerHTML; }
+
+// ===== SETUP =====
+document.getElementById("habitInput").addEventListener("keydown", e => { if (e.key === "Enter") addHabit(); });
+
+window.addEventListener("resize", () => { if (currentView === "tree") drawTree(); });
+
+// Init
+switchView("tree");
+
+// ===== PWA INSTALL =====
+let deferredPrompt;
+window.addEventListener("beforeinstallprompt", e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  document.getElementById("installBanner").classList.remove("hidden");
+});
+
+function installApp() {
+  if (deferredPrompt) {
+    deferredPrompt.prompt();
+    deferredPrompt.userChoice.then(() => { deferredPrompt = null; });
+  }
+  document.getElementById("installBanner").classList.add("hidden");
+}
+
+function dismissInstall() {
+  document.getElementById("installBanner").classList.add("hidden");
+}
+</script>
+</body>
+</html>
