@@ -1,0 +1,720 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="theme-color" content="#0a0f0a">
+<title>The Fractal Self</title>
+<link rel="manifest" href="manifest.json">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  :root{--bg:#0a0f0a;--surface:rgba(30,45,25,0.4);--border:rgba(80,110,60,0.2);--border-active:rgba(100,150,70,0.4);--text:#d4dcc4;--text-dim:#7a8a5a;--text-bright:#c4d4b4;--accent:#6a9a5a;--accent-glow:rgba(100,160,70,0.15);--danger:#8a5a4a;--gold:#c4a454;--font:'Cormorant Garamond',Georgia,serif}
+  body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;min-height:100dvh;overflow-x:hidden}
+  .app{max-width:480px;margin:0 auto;min-height:100vh;min-height:100dvh;display:flex;flex-direction:column}
+  .header{text-align:center;padding:20px 20px 6px;flex-shrink:0}
+  .header-icon{font-size:26px;margin-bottom:2px}.header-title{font-size:22px;font-weight:700;color:var(--text-bright);letter-spacing:1.5px}.header-sub{font-size:11px;color:var(--text-dim);letter-spacing:3px;text-transform:uppercase;margin-top:1px}
+  .nav{display:flex;justify-content:center;gap:6px;padding:8px 16px 4px;flex-shrink:0}
+  .nav-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:6px 18px;border-radius:20px;font-size:13px;font-family:var(--font);cursor:pointer;transition:all .2s}
+  .nav-btn.active{background:var(--accent-glow);border-color:var(--border-active);color:#a4c494}
+
+  /* Grove selector */
+  .grove-bar{display:flex;gap:6px;padding:6px 16px 4px;overflow-x:auto;flex-shrink:0;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+  .grove-bar::-webkit-scrollbar{display:none}
+  .grove-tab{background:var(--surface);border:1px solid var(--border);color:var(--text-dim);padding:5px 14px;border-radius:16px;font-size:12px;font-family:var(--font);cursor:pointer;white-space:nowrap;transition:all .2s;flex-shrink:0}
+  .grove-tab.active{background:rgba(80,120,60,0.25);border-color:var(--border-active);color:var(--text-bright)}
+  .grove-tab.add-grove{border-style:dashed;color:var(--text-dim);font-size:14px;padding:5px 12px}
+  .grove-tab .grove-dot{display:inline-block;width:6px;height:6px;border-radius:50%;margin-right:5px}
+
+  .timer-bar{text-align:center;padding:4px 16px 6px;font-size:12px;color:var(--text-dim);letter-spacing:1px}
+  .timer-bar .countdown{font-size:15px;font-weight:700;color:var(--text-bright);letter-spacing:2px;margin-left:4px}
+  .timer-bar .all-done{color:var(--accent)}
+
+  .tree-view{flex:1;position:relative;min-height:300px}
+  .tree-canvas{width:100%;height:100%;display:block;position:absolute;top:0;left:0}
+  .tree-empty{position:absolute;top:42%;left:50%;transform:translate(-50%,-50%);text-align:center;padding:32px;z-index:2}
+  .tree-empty-icon{font-size:48px;margin-bottom:12px}.tree-empty-title{font-size:22px;font-weight:700;color:var(--text-bright);margin-bottom:8px}.tree-empty-text{font-size:15px;color:var(--text-dim);line-height:1.5;margin-bottom:24px}
+  .cta-btn{background:linear-gradient(135deg,#3a5a2a,#4a6a3a);border:none;color:#d4e4c4;padding:12px 36px;border-radius:24px;font-size:16px;font-family:var(--font);cursor:pointer;letter-spacing:1px}
+  .quick-check{position:absolute;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(8,12,8,0.95) 30%);padding:40px 20px 24px;z-index:2}
+  .quick-title{font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin-bottom:8px}
+  .quick-item{display:flex;align-items:center;gap:10px;width:100%;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:11px 14px;margin-bottom:6px;color:#a4b494;font-size:15px;font-family:var(--font);cursor:pointer;text-align:left;transition:all .25s}
+  .quick-item.done{background:rgba(60,90,45,0.3);border-color:rgba(100,150,70,0.3);color:#b4d4a4}
+  .quick-check-mark{font-size:17px;width:22px;flex-shrink:0;text-align:center}.quick-name{flex:1}
+  .streak-badge{font-size:11px;background:rgba(180,140,40,0.2);padding:2px 8px;border-radius:10px;color:var(--gold)}
+
+  .panel{flex:1;padding:12px 20px 40px;overflow-y:auto}
+  .panel-title{font-size:22px;font-weight:700;color:var(--text-bright);margin-bottom:4px}
+  .panel-desc{font-size:14px;color:var(--text-dim);margin-bottom:16px;line-height:1.5}
+  .section-label{font-size:11px;color:var(--text-dim);letter-spacing:2px;text-transform:uppercase;margin:16px 0 8px}
+  .add-row{display:flex;gap:8px;margin-bottom:16px}
+  .add-input{flex:1;background:rgba(30,45,25,0.6);border:1px solid var(--border);border-radius:12px;padding:10px 14px;color:var(--text-bright);font-size:15px;font-family:var(--font);outline:none}
+  .add-input::placeholder{color:rgba(120,140,100,0.5)}.add-input:focus{border-color:var(--border-active)}
+  .add-btn{background:linear-gradient(135deg,#3a5a2a,#4a6a3a);border:none;color:#d4e4c4;width:46px;border-radius:12px;font-size:24px;font-family:var(--font);cursor:pointer}
+  .suggestions{padding:16px;background:rgba(30,45,25,0.3);border-radius:12px;margin-bottom:16px}
+  .suggestions-label{font-size:13px;color:var(--text-dim);margin-bottom:8px}
+  .suggestion-btn{display:block;width:100%;text-align:left;background:rgba(50,70,40,0.3);border:1px solid var(--border);border-radius:8px;padding:9px 12px;margin-bottom:6px;color:#a4b494;font-size:14px;font-family:var(--font);cursor:pointer}
+  .habit-card{display:flex;align-items:center;gap:12px;background:var(--surface);border:1px solid rgba(80,110,60,0.15);border-radius:12px;padding:12px 14px;margin-bottom:8px}
+  .habit-check{width:34px;height:34px;border-radius:50%;border:2px solid rgba(80,110,60,0.4);background:transparent;color:transparent;font-size:17px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;transition:all .2s}
+  .habit-check.done{background:rgba(70,110,50,0.4);border-color:var(--accent);color:#a4d494}
+  .habit-info{flex:1}.habit-name{font-size:16px;color:var(--text-bright)}.habit-streak{font-size:12px;color:var(--text-dim);margin-top:2px}
+  .remove-btn{background:transparent;border:none;color:#5a4a4a;font-size:22px;cursor:pointer;padding:4px}
+  .stat-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:16px 0 20px}
+  .stat-card{background:var(--surface);border:1px solid rgba(80,110,60,0.15);border-radius:12px;padding:14px 12px;text-align:center}
+  .stat-number{font-size:28px;font-weight:700;color:var(--text-bright);margin-bottom:4px}
+  .stat-label{font-size:11px;color:var(--text-dim);letter-spacing:.5px}
+  .philosophy{padding:18px 16px;background:rgba(30,45,25,0.3);border-radius:12px;text-align:center;margin-bottom:20px}
+  .philo-quote{font-size:14px;font-style:italic;color:#a4b494;line-height:1.6}.philo-attr{font-size:11px;color:#5a6a4a;margin-top:8px}
+  .tree-shape-section{margin-bottom:20px}.tree-shape-label{font-size:11px;color:var(--text-dim);margin-bottom:8px;letter-spacing:2px;text-transform:uppercase}
+  .tree-shapes{display:flex;gap:8px;flex-wrap:wrap}
+  .tree-shape-btn{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:8px 14px;color:#a4b494;font-size:12px;font-family:var(--font);cursor:pointer;transition:all .2s}
+  .tree-shape-btn.active{background:var(--accent-glow);border-color:var(--border-active);color:var(--text-bright)}
+  .grove-actions{display:flex;gap:8px;margin-top:16px;margin-bottom:20px}
+  .grove-action-btn{background:transparent;border:1px solid var(--border);color:var(--text-dim);padding:7px 14px;border-radius:8px;font-size:12px;font-family:var(--font);cursor:pointer}
+  .grove-action-btn.danger{border-color:rgba(120,60,50,0.3);color:var(--danger)}
+  .reset-btn{background:transparent;border:1px solid rgba(120,60,50,0.3);color:var(--danger);padding:8px 20px;border-radius:8px;font-size:13px;font-family:var(--font);cursor:pointer;display:block;margin:12px auto 0}
+  .mirror-note{text-align:center;font-size:12px;color:var(--text-dim);font-style:italic;padding:8px 20px;line-height:1.5}
+  .privacy-link{text-align:center;margin-top:16px}
+  .privacy-link button{background:transparent;border:none;color:var(--text-dim);font-size:11px;font-family:var(--font);cursor:pointer;text-decoration:underline;letter-spacing:0.5px}
+  .privacy-content{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px;margin-top:12px;font-size:13px;color:var(--text-dim);line-height:1.7}
+  .privacy-content h3{color:var(--text-bright);font-size:15px;margin:12px 0 6px;font-weight:600}
+  .privacy-content h3:first-child{margin-top:0}
+
+  /* Modal */
+  .modal-overlay{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.7);z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+  .modal{background:#151a12;border:1px solid var(--border);border-radius:16px;padding:24px;max-width:340px;width:100%}
+  .modal-title{font-size:18px;font-weight:700;color:var(--text-bright);margin-bottom:12px}
+  .modal-input{width:100%;background:rgba(30,45,25,0.6);border:1px solid var(--border);border-radius:10px;padding:10px 14px;color:var(--text-bright);font-size:15px;font-family:var(--font);outline:none;margin-bottom:16px}
+  .modal-input:focus{border-color:var(--border-active)}
+  .modal-buttons{display:flex;gap:8px;justify-content:flex-end}
+  .modal-btn{padding:8px 18px;border-radius:10px;font-size:14px;font-family:var(--font);cursor:pointer;border:none}
+  .modal-btn.primary{background:linear-gradient(135deg,#3a5a2a,#4a6a3a);color:#d4e4c4}
+  .modal-btn.secondary{background:transparent;border:1px solid var(--border);color:var(--text-dim)}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header"><div class="header-icon">🌿</div><div class="header-title">The Fractal Self</div><div class="header-sub">one rule, repeated</div></div>
+  <div class="nav">
+    <button class="nav-btn active" data-view="tree" onclick="switchView('tree')">🌳 Tree</button>
+    <button class="nav-btn" data-view="habits" onclick="switchView('habits')">✓ Habits</button>
+    <button class="nav-btn" data-view="stats" onclick="switchView('stats')">◎ Stats</button>
+  </div>
+  <div id="groveBar" class="grove-bar"></div>
+  <div id="timerBar" class="timer-bar"></div>
+  <div id="view-tree" class="tree-view">
+    <canvas id="treeCanvas" class="tree-canvas"></canvas>
+    <canvas id="petalCanvas" class="tree-canvas" style="pointer-events:none"></canvas>
+    <div id="treeEmpty" class="tree-empty hidden"><div class="tree-empty-icon">🌱</div><div class="tree-empty-title">Plant your first seed</div><div class="tree-empty-text">Add one small habit — your fractal starts here</div><button class="cta-btn" onclick="switchView('habits')">Begin</button><div class="mirror-note" style="margin-top:20px">This tree grows with you, not against you.<br>Miss a day? The upward fractal starts again tonight.</div></div>
+    <div id="quickCheck" class="quick-check hidden"></div>
+  </div>
+  <div id="view-habits" class="panel hidden">
+    <div id="habitsContent"></div>
+  </div>
+  <div id="view-stats" class="panel hidden"><div class="panel-title">Your Fractal</div><div id="statsContent"></div></div>
+</div>
+<div id="modal" class="modal-overlay hidden" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-title" id="modalTitle"></div>
+    <input class="modal-input" id="modalInput" maxlength="30">
+    <div class="modal-buttons">
+      <button class="modal-btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="modal-btn primary" id="modalConfirm" onclick="confirmModal()">Create</button>
+    </div>
+  </div>
+</div>
+<script>
+// ===== DATE UTILS =====
+function getLocalDateStr(d){d=d||new Date();return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
+function getToday(){return getLocalDateStr()}
+function getLocalDateOffset(n){const d=new Date();d.setDate(d.getDate()-n);return getLocalDateStr(d)}
+function getTimeUntilMidnight(){const n=new Date(),m=new Date(n);m.setHours(24,0,0,0);return m-n}
+function formatCountdown(ms){const t=Math.floor(ms/1000),h=String(Math.floor(t/3600)).padStart(2,'0'),m=String(Math.floor((t%3600)/60)).padStart(2,'0'),s=String(t%60).padStart(2,'0');return h+':'+m+':'+s}
+
+// ===== DATA =====
+const STORAGE_KEY="fractal-self-data-v2";
+const OLD_KEY="fractal-self-data";
+const TIME_KEY="fractal-time-mode";
+let currentTimeMode=(function(){try{return localStorage.getItem(TIME_KEY)||'night'}catch(e){return'night'}})();
+
+function defaultData(){return{groves:[{id:'g_'+Date.now(),name:'Daily Roots',treeShape:'classic',habits:[]}],logs:{},activeGrove:null}}
+
+function migrate(){
+  // Check for v1 data
+  try{
+    const old=localStorage.getItem(OLD_KEY);
+    if(!old)return null;
+    const v1=JSON.parse(old);
+    if(!v1.habits||v1.habits.length===0)return null;
+    const gid='g_'+Date.now();
+    const nd={groves:[{id:gid,name:'Daily Roots',treeShape:localStorage.getItem('fractal-tree-shape')||'classic',habits:v1.habits}],logs:v1.logs||{},activeGrove:gid};
+    return nd;
+  }catch(e){return null}
+}
+
+function loadData(){
+  try{
+    const raw=localStorage.getItem(STORAGE_KEY);
+    if(raw)return JSON.parse(raw);
+  }catch(e){}
+  const migrated=migrate();
+  if(migrated){saveData(migrated);return migrated}
+  const d=defaultData();
+  d.activeGrove=d.groves[0].id;
+  return d;
+}
+
+function saveData(d){try{localStorage.setItem(STORAGE_KEY,JSON.stringify(d))}catch(e){}}
+
+let data=loadData();
+if(!data.activeGrove&&data.groves.length>0)data.activeGrove=data.groves[0].id;
+
+function activeGrove(){return data.groves.find(g=>g.id===data.activeGrove)||data.groves[0]}
+function activeHabits(){const g=activeGrove();return g?g.habits:[]}
+function allHabits(){return data.groves.flatMap(g=>g.habits)}
+
+function getStreak(id){let s=0;for(let i=0;i<365;i++){if(data.logs[id+'-'+getLocalDateOffset(i)]){s++}else if(i>0)break}return s}
+
+function getHealthForHabits(habits){
+  if(habits.length===0)return 0.1;
+  let t=0,c=0;
+  habits.forEach(h=>{for(let i=0;i<14;i++){const w=(14-i)/14;if(data.logs[h.id+'-'+getLocalDateOffset(i)])t+=w;c+=w}});
+  return c>0?Math.max(0.1,t/c):0.1;
+}
+
+function getHealth(){return getHealthForHabits(activeHabits())}
+function getForestHealth(){return getHealthForHabits(allHabits())}
+
+function getTreeDepth(){
+  const habits=activeHabits();
+  let checks=0;
+  habits.forEach(h=>{for(let i=0;i<60;i++){if(data.logs[h.id+'-'+getLocalDateOffset(i)])checks++}});
+  return Math.min(10,3+Math.floor(checks/3));
+}
+
+function getMaturity(){
+  const habits=activeHabits();if(habits.length===0)return 0;
+  let totalChecks=0,bestStreak=0;
+  habits.forEach(h=>{let streak=0;for(let i=0;i<365;i++){if(data.logs[h.id+'-'+getLocalDateOffset(i)]){totalChecks++;streak++}else{if(streak>bestStreak)bestStreak=streak;streak=0}}if(streak>bestStreak)bestStreak=streak});
+  return Math.min(100,bestStreak*1.2+totalChecks*0.15);
+}
+function getPhase(){const m=getMaturity();if(m<15)return 1;if(m<35)return 2;if(m<65)return 3;return 4}
+function getPhaseLabel(){const p=getPhase();return['','Growth','Maturation','Ecosystem','Transcendence'][p]}
+function getMaturityDepth(){return Math.min(12,3+Math.floor(getMaturity()/5))}
+
+// ===== TIMER =====
+function updateTimer(){
+  const bar=document.getElementById('timerBar'),today=getToday(),habits=activeHabits();
+  const allDone=habits.length>0&&habits.every(h=>data.logs[h.id+'-'+today]);
+  const ms=getTimeUntilMidnight();
+  if(habits.length===0){bar.innerHTML=''}
+  else if(allDone){bar.innerHTML='<span class="all-done">✓ All done today</span> · Next check-in <span class="countdown">'+formatCountdown(ms)+'</span>'}
+  else{const r=habits.filter(h=>!data.logs[h.id+'-'+today]).length;bar.innerHTML=r+' remaining · Resets in <span class="countdown">'+formatCountdown(ms)+'</span>'}
+}
+setInterval(updateTimer,1000);
+
+// ===== MODAL =====
+let modalCallback=null;
+function openModal(title,placeholder,btnText,cb){
+  document.getElementById('modalTitle').textContent=title;
+  const inp=document.getElementById('modalInput');inp.value='';inp.placeholder=placeholder||'';
+  document.getElementById('modalConfirm').textContent=btnText||'Create';
+  document.getElementById('modal').classList.remove('hidden');
+  modalCallback=cb;
+  setTimeout(()=>inp.focus(),100);
+}
+function closeModal(){document.getElementById('modal').classList.add('hidden');modalCallback=null}
+function confirmModal(){
+  const v=document.getElementById('modalInput').value.trim();
+  if(v&&modalCallback){modalCallback(v);closeModal()}
+}
+document.getElementById('modalInput').addEventListener('keydown',e=>{if(e.key==='Enter')confirmModal()});
+
+// ===== GROVE MANAGEMENT =====
+function renderGroveBar(){
+  const bar=document.getElementById('groveBar');
+  const colors=['#6a9a5a','#5a8aaa','#aa8a5a','#9a6a8a','#7aaa7a','#aa7a5a'];
+  bar.innerHTML=data.groves.map((g,i)=>{
+    const c=colors[i%colors.length];
+    const h=getHealthForHabits(g.habits);
+    const dot=g.habits.length>0?'<span class="grove-dot" style="background:'+c+';opacity:'+(0.3+h*0.7)+'"></span>':'';
+    return'<button class="grove-tab'+(g.id===data.activeGrove?' active':'')+'" onclick="selectGrove(\''+g.id+'\')">'+dot+esc(g.name)+'</button>';
+  }).join('')+'<button class="grove-tab add-grove" onclick="addGrove()">+</button>';
+}
+
+function selectGrove(id){data.activeGrove=id;saveData(data);renderAll();renderGroveBar();startPetalAnim()}
+function addGrove(){
+  openModal('New Tree','e.g. Health, Business, Creative...','Plant',function(name){
+    const g={id:'g_'+Date.now(),name:name,treeShape:'classic',habits:[]};
+    data.groves.push(g);data.activeGrove=g.id;saveData(data);renderAll();renderGroveBar();
+  });
+}
+
+// ===== NAVIGATION =====
+let currentView="tree";
+function switchView(v){
+  currentView=v;
+  document.querySelectorAll(".nav-btn").forEach(b=>b.classList.toggle("active",b.dataset.view===v));
+  document.getElementById("view-tree").classList.toggle("hidden",v!=="tree");
+  document.getElementById("view-habits").classList.toggle("hidden",v!=="habits");
+  document.getElementById("view-stats").classList.toggle("hidden",v!=="stats");
+  if(v==="tree"){drawTree();startPetalAnim()}else{stopPetalAnim()}
+  if(v==="habits")renderHabits();
+  if(v==="stats")renderStats();
+}
+
+// ===== HABITS =====
+function addHabit(){
+  const input=document.getElementById("habitInput"),name=input.value.trim();
+  if(!name)return;
+  const g=activeGrove();
+  if(!g)return;
+  g.habits.push({id:Date.now().toString(),name:name,created:getToday()});
+  saveData(data);input.value="";renderHabits();
+}
+function toggleLog(id){const k=id+'-'+getToday();data.logs[k]=!data.logs[k];saveData(data);renderAll()}
+function removeHabit(id){
+  if(!confirm("Remove this commitment?"))return;
+  const g=activeGrove();if(!g)return;
+  g.habits=g.habits.filter(h=>h.id!==id);saveData(data);renderHabits();if(currentView==="tree")drawTree();
+}
+function fillSuggestion(t){document.getElementById("habitInput").value=t;document.getElementById("habitInput").focus()}
+
+function renderHabits(){
+  const g=activeGrove();
+  if(!g)return;
+  const today=getToday();
+  const el=document.getElementById("habitsContent");
+  let html='<div class="panel-title">'+esc(g.name)+'</div>';
+  html+='<div class="panel-desc">Commitments for this tree. Start with one.</div>';
+  html+='<div class="add-row"><input id="habitInput" class="add-input" placeholder="e.g. Brush my teeth" maxlength="50"><button class="add-btn" onclick="addHabit()">+</button></div>';
+
+  if(g.habits.length===0){
+    const ideas=["Brush my teeth","Make my bed","Drink a glass of water","5 minutes of reading"];
+    html+='<div class="suggestions"><div class="suggestions-label">Ideas for your first rule:</div>'+ideas.map(i=>'<button class="suggestion-btn" onclick="fillSuggestion(\''+i+'\')">'+i+'</button>').join('')+'</div>';
+  }
+
+  html+=g.habits.map(h=>{
+    const st=getStreak(h.id),done=data.logs[h.id+'-'+today];
+    return'<div class="habit-card"><button class="habit-check '+(done?"done":"")+'" onclick="toggleLog(\''+h.id+'\')">'+(done?"✓":"")+'</button><div class="habit-info"><div class="habit-name">'+esc(h.name)+'</div><div class="habit-streak">'+(st>0?st+" day streak":"Start today")+'</div></div><button class="remove-btn" onclick="removeHabit(\''+h.id+'\')">×</button></div>';
+  }).join('');
+
+  html+='<div class="mirror-note" style="margin-top:20px">This tree grows with you, not against you.<br>Miss a day? The upward fractal starts again tonight.</div>';
+
+  el.innerHTML=html;
+  // Re-attach enter key listener
+  const inp=document.getElementById("habitInput");
+  if(inp)inp.addEventListener("keydown",e=>{if(e.key==="Enter")addHabit()});
+}
+
+// ===== STATS =====
+function renderStats(){
+  const g=activeGrove();if(!g)return;
+  const habits=g.habits;
+  const health=getHealthForHabits(habits);
+  const tc=habits.reduce((s,h)=>{let c=0;for(let i=0;i<365;i++)if(data.logs[h.id+'-'+getLocalDateOffset(i)])c++;return s+c},0);
+  const bs=habits.reduce((m,h)=>Math.max(m,getStreak(h.id)),0);
+  const hc=health>.6?"#6a9a5a":health>.3?"#aa8a3a":"#9a4a3a";
+  const shapes=[{id:'classic',name:'🌳 Oak'},{id:'willow',name:'🌿 Willow'},{id:'pine',name:'🌲 Pine'},{id:'bonsai',name:'🎋 Bonsai'},{id:'cherry',name:'🌸 Cherry'}];
+
+  // Forest overview
+  const fHealth=getForestHealth();
+  const totalTrees=data.groves.length;
+  const totalHabits=allHabits().length;
+  const fhc=fHealth>.6?"#6a9a5a":fHealth>.3?"#aa8a3a":"#9a4a3a";
+
+  let html='<div class="section-label">'+esc(g.name)+'</div>';
+  const phase=getPhase(),mat=Math.round(getMaturity()),pLabel=getPhaseLabel();
+  const phaseColors=['','#aa8a3a','#8aaa5a','#5aaa8a','#aa8adf'];
+  html+='<div style="text-align:center;margin:8px 0 16px"><span style="font-size:13px;color:'+phaseColors[phase]+';letter-spacing:1px">Phase '+phase+': '+pLabel+'</span><div style="margin:8px auto;width:80%;height:4px;background:rgba(40,60,30,0.4);border-radius:2px;overflow:hidden"><div style="width:'+mat+'%;height:100%;background:linear-gradient(90deg,'+phaseColors[Math.max(1,phase-1)]+','+phaseColors[phase]+');border-radius:2px;transition:width .5s"></div></div><span style="font-size:11px;color:var(--text-dim)">Maturity: '+mat+'/100</span></div>';
+  html+='<div class="stat-grid"><div class="stat-card"><div class="stat-number">'+habits.length+'</div><div class="stat-label">Branches</div></div><div class="stat-card"><div class="stat-number">'+tc+'</div><div class="stat-label">Iterations</div></div><div class="stat-card"><div class="stat-number" style="color:'+hc+'">'+Math.round(health*100)+'%</div><div class="stat-label">Vitality</div></div><div class="stat-card"><div class="stat-number">'+bs+'</div><div class="stat-label">Best streak</div></div></div>';
+
+  html+='<div class="tree-shape-section"><div class="tree-shape-label">Tree Shape</div><div class="tree-shapes">'+shapes.map(s=>'<button class="tree-shape-btn '+(g.treeShape===s.id?"active":"")+'" onclick="setTreeShape(\''+s.id+'\')">'+s.name+'</button>').join('')+'</div></div>';
+
+  html+='<div class="tree-shape-section"><div class="tree-shape-label">Sky</div><div class="tree-shapes"><button class="tree-shape-btn '+(currentTimeMode==='day'?"active":"")+'" onclick="setTimeMode(\'day\')">☀️ Day</button><button class="tree-shape-btn '+(currentTimeMode==='night'?"active":"")+'" onclick="setTimeMode(\'night\')">🌙 Night</button></div></div>';
+
+  if(data.groves.length>1){
+    html+='<div class="section-label">Your Forest</div>';
+    html+='<div class="stat-grid"><div class="stat-card"><div class="stat-number">'+totalTrees+'</div><div class="stat-label">Trees</div></div><div class="stat-card"><div class="stat-number">'+totalHabits+'</div><div class="stat-label">Total habits</div></div><div class="stat-card"><div class="stat-number" style="color:'+fhc+'">'+Math.round(fHealth*100)+'%</div><div class="stat-label">Forest health</div></div><div class="stat-card"><div class="stat-number">'+Object.values(data.logs).filter(Boolean).length+'</div><div class="stat-label">All iterations</div></div></div>';
+  }
+
+  html+='<div class="grove-actions"><button class="grove-action-btn" onclick="renameGrove()">Rename tree</button>';
+  if(data.groves.length>1)html+='<button class="grove-action-btn danger" onclick="deleteGrove()">Delete tree</button>';
+  html+='</div>';
+
+  html+='<div class="philosophy"><div class="philo-quote">"You can redirect a moving object. You cannot steer a parked car."</div><div class="philo-attr">— The Fractal Self</div></div>';
+
+  html+='<div class="privacy-link"><button onclick="togglePrivacy()">Privacy Policy</button></div>';
+  html+='<div id="privacyContent" class="privacy-content hidden"><h3>Your Data Stays on Your Device</h3>The Fractal Self does not collect, store, or transmit any personal data. All habit data, streaks, and preferences are stored locally on your device using your browser\'s built-in storage. Nothing is sent to any server.<h3>No Accounts Required</h3>You do not need to create an account or provide any personal information to use this app.<h3>No Tracking</h3>This app does not use analytics, cookies, advertising trackers, or any third-party services that monitor your behaviour.<h3>No Third-Party Access</h3>No third party has access to your data. Your habits, streaks, and tree are visible only to you on your device.<h3>Data Deletion</h3>You can delete all your data at any time using the "Reset everything" button in the Stats view, or by clearing your browser\'s site data for this domain.<h3>Changes</h3>If this policy changes — for example, if we add optional cloud sync or accounts in the future — we will update this page and notify users before collecting any data.<h3>Contact</h3>Questions about this policy can be directed to the developer via the project\'s GitHub repository.</div>';
+
+  document.getElementById("statsContent").innerHTML=html;
+}
+
+function setTreeShape(s){const g=activeGrove();if(!g)return;g.treeShape=s;saveData(data);renderStats();drawTree();startPetalAnim()}
+function setTimeMode(m){currentTimeMode=m;try{localStorage.setItem(TIME_KEY,m)}catch(e){}renderStats();drawTree()}
+function togglePrivacy(){const el=document.getElementById('privacyContent');if(el)el.classList.toggle('hidden')}
+
+function renameGrove(){
+  const g=activeGrove();if(!g)return;
+  openModal('Rename Tree',g.name,'Save',function(name){g.name=name;saveData(data);renderAll();renderGroveBar()});
+}
+function deleteGrove(){
+  const g=activeGrove();if(!g||data.groves.length<=1)return;
+  if(!confirm('Delete "'+g.name+'" and all its habits? This cannot be undone.'))return;
+  data.groves=data.groves.filter(x=>x.id!==g.id);
+  data.activeGrove=data.groves[0].id;
+  saveData(data);renderAll();renderGroveBar();
+}
+
+// ===== TREE DRAWING =====
+function drawTree(){
+  const canvas=document.getElementById("treeCanvas"),container=document.getElementById("view-tree"),empty=document.getElementById("treeEmpty"),quick=document.getElementById("quickCheck");
+  const rect=container.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;canvas.style.width=rect.width+"px";canvas.style.height=rect.height+"px";
+  const ctx=canvas.getContext("2d");ctx.scale(dpr,dpr);
+  const w=rect.width,h=rect.height,health=getHealth(),depth=getMaturityDepth(),habits=activeHabits(),bc=Math.min(3,2+Math.floor(habits.length/2));
+  const phase=getPhase(),maturity=getMaturity();
+  const g=activeGrove();const shape=g?g.treeShape:'classic';
+  drawBg(ctx,w,h,health,phase,maturity);drawGnd(ctx,w,h,health,phase,maturity);
+  drawEnvironment(ctx,w,h,health,phase,maturity);
+  ctx.font="600 13px 'Cormorant Garamond',Georgia,serif";ctx.fillStyle=currentTimeMode==='day'?"rgba(40,60,30,0.7)":"rgba(255,255,255,0.7)";ctx.textAlign="center";
+  ctx.fillText(Math.round(health*100)+"% vitality · "+getPhaseLabel(),w/2,28);
+  if(habits.length>0){
+    const tl=Math.min(h*.25,90+depth*8+maturity*0.3);
+    switch(shape){case'willow':drawWillow(ctx,w/2,h-55,tl,Math.PI/2,0,depth,health,bc);break;case'pine':drawPine(ctx,w/2,h-55,tl*1.2,depth,health);break;case'bonsai':drawBonsai(ctx,w/2,h-55,tl*.7,Math.PI/2,0,depth,health,bc);break;case'cherry':drawCherry(ctx,w/2,h-55,tl,Math.PI/2,0,depth,health,bc);break;default:drawClassic(ctx,w/2,h-55,tl,Math.PI/2,0,depth,health,bc)}
+    if(phase>=2)drawTrunkDetail(ctx,w/2,h-55,health,maturity);
+    empty.classList.add("hidden");renderQuickCheck(quick);quick.classList.remove("hidden");
+  }else{empty.classList.remove("hidden");quick.classList.add("hidden")}
+}
+function drawBg(ctx,w,h,health,phase,maturity){
+  const g=ctx.createLinearGradient(0,0,0,h);
+  const hf=Math.max(0.1,health);
+  const day=currentTimeMode==='day';
+  if(day){
+    if(phase>=3&&hf>0.5){g.addColorStop(0,"#5a8ab8");g.addColorStop(0.3,"#78aad0");g.addColorStop(0.7,"#90c0d8");g.addColorStop(1,"#b8d8c0")}
+    else if(hf>0.5){g.addColorStop(0,"#6090b8");g.addColorStop(0.5,"#88b8d0");g.addColorStop(1,"#a0c8b0")}
+    else{g.addColorStop(0,"#8898a0");g.addColorStop(0.5,"#a0a898");g.addColorStop(1,"#90988a")}
+  }else{
+    if(phase>=3&&hf>0.5){g.addColorStop(0,"#060f20");g.addColorStop(0.4,"#0f1f38");g.addColorStop(0.7,"#0a1a28");g.addColorStop(1,"#081810")}
+    else if(hf>0.5){g.addColorStop(0,"#0a1628");g.addColorStop(.5,"#1a2a40");g.addColorStop(1,"#0d1f1a")}
+    else{g.addColorStop(0,"#1a1510");g.addColorStop(.5,"#201a12");g.addColorStop(1,"#151210")}
+  }
+  ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  if(day){
+    // Clouds
+    const cloudCount=3+Math.floor(phase*0.5);
+    for(let i=0;i<cloudCount;i++){
+      const seed=i*83.7;
+      const cx=(Math.sin(seed)*.5+.5)*w;
+      const cy=30+Math.abs(Math.cos(seed*1.3))*h*0.2;
+      const cw=30+Math.sin(seed*2)*15+phase*5;
+      const ch=8+Math.sin(seed*3)*4;
+      ctx.beginPath();ctx.ellipse(cx,cy,cw,ch,0,0,Math.PI*2);
+      ctx.fillStyle="rgba(255,255,255,"+(0.15+hf*0.15)+")";ctx.fill();
+      ctx.beginPath();ctx.ellipse(cx+cw*0.3,cy-ch*0.3,cw*0.6,ch*0.8,0,0,Math.PI*2);
+      ctx.fillStyle="rgba(255,255,255,"+(0.1+hf*0.1)+")";ctx.fill();
+    }
+    // Sun glow
+    if(hf>0.3){
+      const sg=ctx.createRadialGradient(w*0.75,h*0.08,5,w*0.75,h*0.08,60+phase*10);
+      sg.addColorStop(0,"rgba(255,240,200,"+(0.2+hf*0.15)+")");
+      sg.addColorStop(0.5,"rgba(255,230,180,"+(0.05+hf*0.05)+")");
+      sg.addColorStop(1,"rgba(255,220,160,0)");
+      ctx.fillStyle=sg;ctx.fillRect(0,0,w,h*0.4);
+    }
+  }else{
+    const starCount=40+Math.floor(maturity*0.5);
+    for(let i=0;i<starCount;i++){
+      const sx=(Math.sin(i*127.1)*.5+.5)*w,sy=(Math.cos(i*311.7)*.5+.5)*h*.6;
+      const brightness=(hf*.6+.2)*(.3+Math.random()*.4);
+      const size=phase>=3&&i%7===0?1.5+Math.random():0.5+Math.random();
+      ctx.beginPath();ctx.arc(sx,sy,size,0,Math.PI*2);
+      ctx.fillStyle="rgba(255,255,220,"+brightness+")";ctx.fill();
+    }
+    if(phase>=4&&hf>0.4){
+      const ag=ctx.createLinearGradient(0,0,0,h*0.3);
+      ag.addColorStop(0,"rgba(60,120,80,"+(hf*0.08)+")");
+      ag.addColorStop(0.5,"rgba(40,80,100,"+(hf*0.05)+")");
+      ag.addColorStop(1,"rgba(0,0,0,0)");
+      ctx.fillStyle=ag;ctx.fillRect(0,0,w,h*0.3);
+    }
+  }
+}
+function drawGnd(ctx,w,h,health,phase,maturity){
+  const hf=Math.max(0.1,health);
+  const day=currentTimeMode==='day';
+  const moundW=w*(0.35+maturity*0.002);
+  const moundH=45+maturity*0.15;
+  const grd=ctx.createLinearGradient(0,h-70,0,h);
+  const gGreen=Math.floor((day?80:50)+hf*(day?70:50)+phase*8);
+  const gBase=day?40:25;
+  grd.addColorStop(0,"rgba("+(gBase+Math.floor((1-hf)*(day?15:25)))+","+gGreen+","+(day?30:18)+","+(day?"0.9":"0.85")+")");
+  grd.addColorStop(1,"rgba("+(day?30:15)+","+(day?40:25)+","+(day?20:12)+",0.95)");
+  ctx.fillStyle=grd;ctx.beginPath();ctx.ellipse(w/2,h-8,moundW,moundH,0,0,Math.PI*2);ctx.fill();
+  if(phase>=2&&hf>0.3){
+    const grassCount=Math.floor(15+maturity*0.5);
+    const grassG=day?Math.floor(120+hf*80):Math.floor(90+hf*60);
+    for(let i=0;i<grassCount;i++){
+      const seed=i*47.3;
+      const gx=w/2+(Math.sin(seed)*moundW*0.85);
+      const gy=h-8-Math.abs(Math.cos(seed))*moundH*0.6;
+      const gh=4+hf*6+Math.sin(seed*2.1)*3;
+      const lean=Math.sin(seed*1.7)*0.3;
+      ctx.beginPath();ctx.moveTo(gx,gy);ctx.lineTo(gx+lean*gh,gy-gh);
+      ctx.strokeStyle="rgba("+(day?60:50)+","+grassG+","+(day?40:30)+","+(0.3+hf*0.3)+")";
+      ctx.lineWidth=1;ctx.stroke();
+    }
+  }
+  if(phase>=3&&hf>0.4){
+    const flowerCount=Math.floor(5+maturity*0.2);
+    const flowerColors=day?["rgba(230,200,60,","rgba(220,140,200,","rgba(140,180,230,","rgba(230,130,100,"]:["rgba(200,180,100,","rgba(180,140,180,","rgba(150,180,200,","rgba(200,160,140,"];
+    for(let i=0;i<flowerCount;i++){
+      const seed=i*91.7;
+      const fx=w/2+(Math.sin(seed)*moundW*0.7);
+      const fy=h-12-Math.abs(Math.cos(seed))*moundH*0.5;
+      ctx.beginPath();ctx.moveTo(fx,fy);ctx.lineTo(fx,fy-6-hf*4);
+      ctx.strokeStyle="rgba("+(day?60:50)+","+(day?120:90)+",35,0.4)";ctx.lineWidth=0.8;ctx.stroke();
+      const fc=flowerColors[i%flowerColors.length];
+      ctx.beginPath();ctx.arc(fx,fy-6-hf*4,1.5+hf*1.5,0,Math.PI*2);
+      ctx.fillStyle=fc+(day?0.6+hf*0.3:0.4+hf*0.3)+")";ctx.fill();
+    }
+  }
+}
+function drawEnvironment(ctx,w,h,health,phase,maturity){
+  const hf=Math.max(0.1,health);
+  const day=currentTimeMode==='day';
+  if(phase>=2&&hf>0.3){
+    for(let i=0;i<3;i++){
+      const seed=i*137.5;
+      const rx=w*(0.15+Math.sin(seed)*0.35);
+      const ry=h-20-Math.abs(Math.cos(seed))*15;
+      const rs=3+Math.sin(seed*2)*2;
+      ctx.beginPath();ctx.ellipse(rx,ry,rs*2,rs,0,0,Math.PI*2);
+      ctx.fillStyle=day?"rgba(80,90,70,"+(0.15+hf*0.1)+")":"rgba(35,45,30,"+(0.2+hf*0.15)+")";ctx.fill();
+      if(phase>=3){
+        ctx.beginPath();ctx.ellipse(rx,ry-rs*0.5,rs*1.5,rs*0.4,0,Math.PI,Math.PI*2);
+        ctx.fillStyle="rgba("+(day?70:50)+","+Math.floor((day?110:80)+hf*40)+","+(day?45:30)+","+(0.15+hf*0.1)+")";ctx.fill();
+      }
+    }
+  }
+  if(phase>=3&&hf>0.35){
+    const bgTrees=Math.floor(2+maturity*0.03);
+    for(let i=0;i<bgTrees;i++){
+      const seed=i*197.3;
+      const tx=w*(0.08+Math.sin(seed)*0.4);
+      if(Math.abs(tx-w/2)<w*0.15)continue;
+      const ty=h-40-Math.abs(Math.cos(seed))*20;
+      const ts=8+Math.sin(seed*3)*4;
+      ctx.beginPath();ctx.moveTo(tx,ty);ctx.lineTo(tx,ty-ts*1.5);
+      ctx.strokeStyle=day?"rgba(60,80,45,"+(0.15+hf*0.1)+")":"rgba(30,50,25,"+(0.15+hf*0.1)+")";ctx.lineWidth=1.5;ctx.lineCap="round";ctx.stroke();
+      ctx.beginPath();ctx.arc(tx,ty-ts*1.8,ts*0.8,0,Math.PI*2);
+      ctx.fillStyle=day?"rgba(50,"+Math.floor(80+hf*50)+",35,"+(0.12+hf*0.1)+")":"rgba(25,"+Math.floor(50+hf*30)+",20,"+(0.1+hf*0.08)+")";ctx.fill();
+    }
+  }
+  if(phase>=4&&hf>0.4){
+    const time=Date.now()/1000;
+    const moteCount=Math.floor(5+maturity*0.1);
+    for(let i=0;i<moteCount;i++){
+      const seed=i*67.9;
+      const mx=w*(0.1+Math.sin(time*0.2+seed)*0.4);
+      const my=h*(0.2+Math.cos(time*0.15+seed*1.3)*0.3);
+      const pulse=(Math.sin(time*1.5+seed*2)+1)/2;
+      const ms=1+pulse*1.5;
+      ctx.beginPath();ctx.arc(mx,my,ms,0,Math.PI*2);
+      ctx.fillStyle=day?"rgba(255,240,200,"+(0.05+pulse*hf*0.1)+")":"rgba(180,200,140,"+(0.05+pulse*hf*0.15)+")";ctx.fill();
+    }
+  }
+}
+// Seeded random for stable tree shapes across redraws
+function srand(seed){return function(){seed=(seed*16807+0)%2147483647;return(seed-1)/2147483646}}
+
+// Draw a curved branch segment using quadratic bezier
+function curveBranch(ctx,x1,y1,x2,y2,curve,width,color){
+  const mx=(x1+x2)/2+curve;const my=(y1+y2)/2+curve*0.3;
+  ctx.beginPath();ctx.moveTo(x1,y1);ctx.quadraticCurveTo(mx,my,x2,y2);
+  ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.stroke();
+}
+
+// Realistic bark color based on depth
+function barkColor(depth,maxD,health,day){
+  const hf=Math.max(0.1,health);const t=depth/maxD;
+  if(day){return"rgba("+Math.floor(55+t*20)+","+Math.floor(40+t*15)+","+Math.floor(30+t*10)+","+(0.7+hf*0.3)+")"}
+  return"rgba("+Math.floor(40+t*30)+","+Math.floor(30+t*20)+","+Math.floor(20+t*10)+","+(0.5+hf*0.5)+")"
+}
+
+// Buds at branch tips
+function drawBud(ctx,x,y,health,size){
+  const hf=Math.max(0.1,health);if(hf<0.15)return;
+  ctx.beginPath();ctx.arc(x,y,size*(0.5+hf),0,Math.PI*2);
+  ctx.fillStyle="rgba("+Math.floor(50+hf*30)+","+Math.floor(40+hf*50)+","+Math.floor(30+hf*20)+","+(0.4+hf*0.5)+")";
+  ctx.fill();
+}
+
+// Leaf cluster (appears at higher health)
+function drawLeafCluster(ctx,x,y,health,size){
+  const hf=Math.max(0.1,health);if(hf<0.35)return;
+  const count=2+Math.floor(hf*4);
+  for(let i=0;i<count;i++){
+    const a=i*(Math.PI*2/count);const r=size*(0.5+hf*0.8);
+    const lx=x+Math.cos(a)*r*(0.5+Math.random()*0.5);
+    const ly=y+Math.sin(a)*r*(0.5+Math.random()*0.5);
+    const ls=1+hf*2+Math.random();
+    ctx.beginPath();ctx.ellipse(lx,ly,ls,ls*0.7,a,0,Math.PI*2);
+    ctx.fillStyle="rgba("+Math.floor(30+(1-hf)*40)+","+Math.floor(90+hf*80)+","+Math.floor(25+hf*15)+","+(hf*0.55)+")";
+    ctx.fill();
+  }
+}
+
+// Cherry blossom cluster
+function drawBlossomCluster(ctx,x,y,health,size){
+  const hf=Math.max(0.1,health);if(hf<0.2)return;
+  const count=2+Math.floor(hf*5);
+  for(let i=0;i<count;i++){
+    const a=i*(Math.PI*2/count)+Math.random()*0.5;
+    const r=size*(0.5+hf*0.7);
+    const bx=x+Math.cos(a)*r*(0.4+Math.random()*0.6);
+    const by=y+Math.sin(a)*r*(0.4+Math.random()*0.6);
+    const bs=1.5+hf*2.5+Math.random()*1.5;
+    const pr=Math.floor(210+Math.random()*40);const pg=Math.floor(140+hf*70+Math.random()*20);const pb=Math.floor(155+hf*50+Math.random()*25);
+    ctx.beginPath();ctx.arc(bx,by,bs,0,Math.PI*2);
+    ctx.fillStyle="rgba("+pr+","+pg+","+pb+","+(0.25+hf*0.5)+")";ctx.fill();
+    if(hf>0.5&&Math.random()>0.5){ctx.beginPath();ctx.arc(bx,by,bs*0.35,0,Math.PI*2);ctx.fillStyle="rgba(255,245,250,"+(hf*0.35)+")";ctx.fill()}
+  }
+}
+
+// Willow tendril
+function drawTendril(ctx,x,y,length,health){
+  const hf=Math.max(0.1,health);
+  const endX=x+(Math.random()-0.5)*6;const endY=y+length;
+  const cpx=x+(Math.random()-0.5)*8;const cpy=y+length*0.6;
+  ctx.beginPath();ctx.moveTo(x,y);ctx.quadraticCurveTo(cpx,cpy,endX,endY);
+  ctx.strokeStyle="rgba("+Math.floor(50+hf*40)+","+Math.floor(100+hf*70)+",35,"+(0.2+hf*0.35)+")";
+  ctx.lineWidth=0.6;ctx.stroke();
+}
+
+// Main recursive realistic tree
+function drawRealTree(ctx,x,y,len,angle,depth,maxD,health,rng,treeType,bc){
+  if(depth>maxD||len<1.5)return;
+  const hf=Math.max(0.1,health);
+  const day=currentTimeMode==='day';
+
+  // Curved endpoint with natural variation
+  const curve=(rng()-0.5)*len*0.25;
+  const angleJitter=(rng()-0.5)*0.2;
+  const a=angle+angleJitter;
+  const ex=x+len*Math.cos(a);const ey=y-len*Math.sin(a);
+
+  // Width tapers naturally
+  const widthBase=treeType==='bonsai'?2.5:2;
+  const w=Math.max(0.4,(maxD-depth)*widthBase*hf*(0.8+rng()*0.4));
+
+  // Draw branch with curve
+  const col=barkColor(depth,maxD,health,day);
+  curveBranch(ctx,x,y,ex,ey,curve,w,col);
+
+  // Tips: buds, leaves, or blossoms depending on type and health
+  if(depth>=maxD-1){
+    const tipSize=2+hf*3;
+    if(treeType==='cherry'){drawBlossomCluster(ctx,ex,ey,health,tipSize*1.5)}
+    else if(hf>0.35){drawLeafCluster(ctx,ex,ey,health,tipSize)}
+    else{drawBud(ctx,ex,ey,health,tipSize)}
+    // Wilting: fallen elements
+    if(hf<0.35&&rng()>0.6){
+      ctx.beginPath();ctx.arc(ex+(rng()-0.5)*8,ey+rng()*12+3,1+rng(),0,Math.PI*2);
+      ctx.fillStyle="rgba(140,110,40,"+(0.2-hf*0.3)+")";ctx.fill();
+    }
+    return;
+  }
+
+  // Willow: add tendrils at mid-depth
+  if(treeType==='willow'&&depth>=maxD-3&&depth<maxD-1){
+    const nTendrils=1+Math.floor(rng()*3);
+    for(let t=0;t<nTendrils;t++){drawTendril(ctx,ex,ey,8+hf*18+rng()*10,health)}
+  }
+
+  // Branching: asymmetric, natural
+  const shrink=0.62+hf*0.06+rng()*0.06;
+  const branchAngle=treeType==='bonsai'?0.5+depth*0.06:treeType==='willow'?0.35+rng()*0.15:0.3+rng()*0.2;
+
+  // Main fork (always 2 branches)
+  const leftBias=0.85+rng()*0.3;const rightBias=0.85+rng()*0.3;
+  drawRealTree(ctx,ex,ey,len*shrink*leftBias,a+branchAngle,depth+1,maxD,health,rng,treeType,bc);
+  drawRealTree(ctx,ex,ey,len*shrink*rightBias,a-branchAngle*(0.7+rng()*0.6),depth+1,maxD,health,rng,treeType,bc);
+
+  // Extra branch at lower depths for fullness
+  if(depth<maxD-2&&rng()>0.4){
+    const extraAngle=(rng()-0.5)*branchAngle*1.5;
+    drawRealTree(ctx,ex,ey,len*shrink*0.65,a+extraAngle,depth+1,maxD,health,rng,treeType,bc);
+  }
+
+  // Bonsai: occasional strongly asymmetric extra branch
+  if(treeType==='bonsai'&&depth<3&&rng()>0.5){
+    drawRealTree(ctx,ex,ey,len*shrink*0.5,a-branchAngle*2,depth+2,maxD,health,rng,treeType,bc);
+  }
+}
+
+// Pine tree (separate structure)
+function drawRealPine(ctx,cx,by,totalH,depth,health){
+  const hf=Math.max(0.1,health);const day=currentTimeMode==='day';
+  const rng=srand(42);
+  // Trunk
+  const trunkTop=by-totalH;
+  ctx.beginPath();ctx.moveTo(cx,by);
+  ctx.quadraticCurveTo(cx+(rng()-0.5)*4,by-totalH*0.5,cx+(rng()-0.5)*2,trunkTop);
+  ctx.strokeStyle=barkColor(0,10,health,day);ctx.lineWidth=3+depth*0.3;ctx.lineCap="round";ctx.stroke();
+  // Layers
+  const layers=Math.min(depth+1,9);
+  for(let i=0;i<layers;i++){
+    const frac=(i+1)/(layers+1);
+    const y=by-totalH*0.3-(totalH*0.7)*frac;
+    const spread=(30+hf*28)*(1-frac*0.45);
+    for(let side=-1;side<=1;side+=2){
+      const ex=cx+side*spread*(0.8+rng()*0.4);
+      const ey=y+6+(1-hf)*4+rng()*3;
+      const cpx=cx+side*spread*0.4;const cpy=y+(ey-y)*0.3;
+      ctx.beginPath();ctx.moveTo(cx,y);ctx.quadraticCurveTo(cpx,cpy,ex,ey);
+      const g=Math.floor((day?80:70)+hf*80+frac*25);
+      ctx.strokeStyle="rgba("+(day?50:40)+","+g+","+(day?40:30)+","+(0.4+hf*0.5)+")";
+      ctx.lineWidth=1+(1-frac)*1.8;ctx.lineCap="round";ctx.stroke();
+      // Needle clusters
+      if(hf>0.2){
+        const nClusters=2+Math.floor(hf*4);
+        for(let n=0;n<nClusters;n++){
+          const t=(n+1)/(nClusters+1);const nx=cx+(ex-cx)*t;const ny=y+(ey-y)*t;
+          ctx.beginPath();ctx.arc(nx+rng()*3-1.5,ny+rng()*2-1,1.5+hf*2.5,0,Math.PI*2);
+          ctx.fillStyle="rgba("+(day?35:30)+","+Math.floor((day?110:100)+hf*70)+","+(day?30:25)+","+(hf*(day?0.55:0.45))+")";
+          ctx.fill();
+        }
+      }
+    }
+  }
+}
+
+// Wrapper functions that match the existing API
+function drawTrunkDetail(){}
+function bColor(d,mx,h){const hf=Math.max(.1,h),t=1-d/mx;return{r:Math.floor(40+t*60+(1-hf)*80),g:Math.floor(80+(1-t)*120*hf),b:Math.floor(20+(1-hf)*30),a:.4+hf*.6}}
+function drawLeaf(){}
+function drawWilt(){}
+function drawClassic(ctx,x,y,l,a,d,mx,h,bc){const rng=srand(137);drawRealTree(ctx,x,y,l,a,0,mx,h,rng,'classic',bc)}
+function drawWillow(ctx,x,y,l,a,d,mx,h,bc){const rng=srand(251);drawRealTree(ctx,x,y,l,a,0,mx,h,rng,'willow',bc)}
+function drawPine(ctx,cx,by,th,depth,health){drawRealPine(ctx,cx,by,th,depth,health)}
+function drawBonsai(ctx,x,y,l,a,d,mx,h,bc){const rng=srand(419);drawRealTree(ctx,x,y,l,a,0,mx,h,rng,'bonsai',bc)}
+function drawCherry(ctx,x,y,l,a,d,mx,h,bc){const rng=srand(563);drawRealTree(ctx,x,y,l,a,0,mx,h,rng,'cherry',bc)}
+function drawPetals(){}
+let petalAnim=null;let petals=[];
+function initPetals(w,h){petals=[];for(let i=0;i<25;i++){petals.push({x:Math.random()*w,y:Math.random()*h,speed:0.3+Math.random()*0.6,size:2+Math.random()*3,drift:Math.random()*Math.PI*2,wobble:0.3+Math.random()*0.7,r:Math.floor(215+Math.random()*40),g:Math.floor(150+Math.random()*50),b:Math.floor(160+Math.random()*40),alpha:0.2+Math.random()*0.4,rot:Math.random()*Math.PI})}}
+function animatePetals(){const g=activeGrove();if(!g||g.treeShape!=='cherry'||currentView!=='tree'){stopPetalAnim();return}const canvas=document.getElementById('petalCanvas');const container=document.getElementById('view-tree');const rect=container.getBoundingClientRect();const dpr=window.devicePixelRatio||1;canvas.width=rect.width*dpr;canvas.height=rect.height*dpr;canvas.style.width=rect.width+'px';canvas.style.height=rect.height+'px';const ctx=canvas.getContext('2d');ctx.scale(dpr,dpr);const w=rect.width,h=rect.height;const health=getHealth();const hf=Math.max(0.1,health);if(petals.length===0)initPetals(w,h);ctx.clearRect(0,0,w,h);const time=Date.now()/1000;for(let p of petals){p.y+=p.speed;p.x+=Math.sin(time*p.wobble+p.drift)*0.4;p.rot+=0.005;if(p.y>h+10){p.y=-10;p.x=Math.random()*w}if(p.x<-10)p.x=w+10;if(p.x>w+10)p.x=-10;ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);ctx.beginPath();ctx.ellipse(0,0,p.size,p.size*0.55,0,0,Math.PI*2);ctx.fillStyle='rgba('+p.r+','+p.g+','+p.b+','+(p.alpha*hf)+')';ctx.fill();if(hf>0.5){ctx.beginPath();ctx.ellipse(0,0,p.size*0.3,p.size*0.2,0,0,Math.PI*2);ctx.fillStyle='rgba(255,240,245,'+(hf*0.3)+')';ctx.fill()}ctx.restore()}petalAnim=requestAnimationFrame(animatePetals)}
+function startPetalAnim(){stopPetalAnim();const g=activeGrove();if(g&&g.treeShape==='cherry'&&currentView==='tree'){petals=[];animatePetals()}}
+function stopPetalAnim(){if(petalAnim){cancelAnimationFrame(petalAnim);petalAnim=null}const c=document.getElementById('petalCanvas');if(c){const ctx=c.getContext('2d');ctx.clearRect(0,0,c.width,c.height)}}
+function renderQuickCheck(el){const today=getToday(),habits=activeHabits();el.innerHTML='<div class="quick-title">Today</div>'+habits.map(h=>{const done=data.logs[h.id+'-'+today],st=getStreak(h.id);return'<button class="quick-item '+(done?"done":"")+'" onclick="toggleLog(\''+h.id+'\')"><span class="quick-check-mark">'+(done?"✓":"○")+'</span><span class="quick-name">'+esc(h.name)+'</span>'+(st>1?'<span class="streak-badge">'+st+'🔥</span>':'')+'</button>'}).join("")}
+function renderAll(){if(currentView==="tree")drawTree();if(currentView==="habits")renderHabits();if(currentView==="stats")renderStats();updateTimer();renderGroveBar()}
+function esc(s){const d=document.createElement("div");d.textContent=s;return d.innerHTML}
+window.addEventListener("resize",()=>{if(currentView==="tree")drawTree()});
+
+function scheduleRefresh(){setTimeout(()=>{renderAll();scheduleRefresh()},getTimeUntilMidnight()+500)}
+scheduleRefresh();renderGroveBar();switchView("tree");updateTimer();
+</script>
+</body>
+</html>
